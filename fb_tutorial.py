@@ -1,0 +1,84 @@
+import fbchat
+from getpass import getpass
+import time
+from fbchat import log, Client
+
+
+# Subclass fbchat.Client and override required methods
+
+
+class EchoBot(Client):
+    def onMessage(self, mid, author_id, message_object, thread_id, thread_type, **kwargs):
+        self.markAsDelivered(thread_id, message_object.uid)
+        self.markAsRead(thread_id)
+
+        log.info("{} from {} in {}".format(message_object, thread_id, thread_type.name))
+
+        # If you're not the author, echo
+        if author_id != self.uid:
+            self.send(message_object, thread_id=thread_id, thread_type=thread_type)
+
+
+client = EchoBot("beracom@freemail.hu", getpass())
+client.listen()
+
+# username = "beracom@freemail.hu"   #str(input("Username: "))
+# client = fbchat.Client(username, getpass())
+# no_of_friends = 1 #int(input("Number of friends: "))
+#
+# name = "pan" #str(input("Name: "))
+# friends = client.searchForUsers(name)  # return a list of names
+# user = friends[0]
+# print('user ID: {}'.format(user.uid))
+# print("user's name: {}".format(user.name))
+# print("user's photo: {}".format(user.photo))
+# print("Is user client's friend: {}".format(user.is_friend))
+#
+#
+# # Gets the last 10 messages sent to the thread
+# messages = client.fetchThreadMessages(thread_id=100000932560681, limit=10)
+# # Since the message come in reversed order, reverse them
+# messages.reverse()
+#
+# # Prints the content of all the messages
+# for message in messages:
+#     print(message.text)
+#
+# # If we have a thread id, we can use `fetchThreadInfo` to fetch a `Thread` object
+# thread = client.fetchThreadInfo('100000932560681')['100000932560681']
+# print("thread's name: {}".format(thread.name))
+# print("thread's type: {}".format(thread.type))
+#
+#
+# # `searchForThreads` searches works like `searchForUsers`, but gives us a list of threads instead
+# thread = client.searchForThreads('Bold')[0]
+# print("thread's name: {}".format(thread.name))
+# print("thread's type: {}".format(thread.type))
+#
+# thread = client.searchForThreads('pan')[0]
+# messages = client.fetchThreadMessages(thread_id=thread.uid, limit=10)
+# messages.reverse()
+#
+# # Prints the content of all the messages
+# for message in messages:
+#     print(str(message) == 'Nem')
+#     print(message.text)
+
+
+# msg = fetchThreadMessages(thread_id=friend.uid, limit=20, before=None)
+# info = fetchUserInfo(friend.uid)
+# print(msg)
+
+#
+# for i in range(no_of_friends):
+#     name = "Jezeri András" #str(input("Name: "))
+#     friends = client.searchForUsers(name)  # return a list of names
+#     friend = friends[0]
+#     msg = fbchat.models.Message(text=str(input("Message: ")))
+#     msg2 = fbchat.models.Message(text=str(input("Message: ")))
+#     for _ in range(24):
+#         sent = client.send(msg, friend.uid)
+#         sent2 = client.send(msg2, friend.uid)
+#         if sent and sent2:
+#             print("Messages sent successfully!")
+#         time.sleep(600)
