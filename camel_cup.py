@@ -155,17 +155,23 @@ class Game(object):
     def card(self):
         direction = input("Direction (for/back/clear): ")
         number = input("Number: ")
+
         try:
             number = int(number)
         except ValueError:
             print("Index must be a number!")
             return
+
         if 0 > number or 20 < number:
             print("Number must be between 0 and 20!")
             return
 
         if self.table.places[number].camel_unit:
             print("This place has minimum 1 camel.")
+            return
+
+        if self.table.places[number + 1].backward or self.table.places[number + 1].forward or self.table.places[number - 1].backward or self.table.places[number - 1].forward:
+            print("There is a card in the neighborhood of this place.")
             return
 
         if direction == "for":
@@ -197,6 +203,7 @@ class Game(object):
             if self.table.camels[color].active:
                 active_colors.append(color)
 
+        print("Computing the prediction...")
         number_of_dice = len(active_colors)
         for dice_combo in itertools.product([1, 2, 3], repeat=number_of_dice):
             for color_combo in itertools.permutations(active_colors):
