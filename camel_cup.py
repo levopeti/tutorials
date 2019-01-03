@@ -1,5 +1,8 @@
 import copy
 import itertools
+import time
+import math
+import multiprocessing
 
 
 class Camel(object):
@@ -89,7 +92,7 @@ class Game(object):
     def init(self):
         colors = ["red", "blue", "yellow", 'green', "white"]
         for color in colors:
-            number = input("Init of " + color + ' :')
+            number = input("Init of " + color + ': ')
             try:
                 number = int(number)
             except ValueError:
@@ -196,32 +199,86 @@ class Game(object):
                   "green": [0, 0, 0, 0, 0],
                   "white": [0, 0, 0, 0, 0]}
 
-        sequences = []
-
         active_colors = []
         for color in ["red", "blue", "green", "white", "yellow"]:
             if self.table.camels[color].active:
                 active_colors.append(color)
 
         print("Computing the prediction...")
+        POOL_SIZE = 4
+        lock = multiprocessing.Lock()
+        start = time.time()
         number_of_dice = len(active_colors)
-        for dice_combo in itertools.product([1, 2, 3], repeat=number_of_dice):
-            for color_combo in itertools.permutations(active_colors):
-                table = copy.deepcopy(self.table)
-                for i in range(number_of_dice):
-                    table_index = table.camels[color_combo[i]].place
-                    color = table.camels[color_combo[i]].color
-                    camel_unit = table.pop_unit(table_index, color)
-                    table.add_unit(table_index + dice_combo[i], camel_unit)
-                    if table_index + dice_combo[i] > 20:
-                        break
-                sequences.append(table.rank())
+        dice_combos = list(itertools.product([1, 2, 3], repeat=number_of_dice))
+
+        # split dice_combos to equal bins to process dices in parallel
+        n = math.ceil(len(dice_combos) / POOL_SIZE)
+        dice_combo_bins = [dice_combos[i:i + n] for i in range(0, len(dice_combos), int(n))]
+
+        """Without multiprocessing"""
+        # sequences = []
+        #
+        # for dice_combo in itertools.product([1, 2, 3], repeat=number_of_dice):
+        #     for color_combo in itertools.permutations(active_colors):
+        #         table = copy.deepcopy(self.table)
+        #         for i in range(number_of_dice):
+        #             table_index = table.camels[color_combo[i]].place
+        #             color = table.camels[color_combo[i]].color
+        #             camel_unit = table.pop_unit(table_index, color)
+        #             table.add_unit(table_index + dice_combo[i], camel_unit)
+        #             if table_index + dice_combo[i] > 20:
+        #                 break
+        #         sequences.append(table.rank())
+        #         print('append')
+        #
+        # print("Prediction time: {0:.2f}s".format(time.time() - start))
+        #
+        # for i in range(5):
+        #     for seq in sequences:
+        #         for color in ["red", "blue", "green", "white", "yellow"]:
+        #             if seq[i] == color:
+        #                 result[color][i] += 1 / len(sequences) * 100
+
+        def predict_bin(d_c_bin, o_table=None, lock=None, L=None):
+            sequence = []
+            for dice_combo in d_c_bin:
+                for color_combo in itertools.permutations(active_colors):
+                    table = copy.deepcopy(o_table)
+                    for i in range(number_of_dice):
+                        table_index = table.camels[color_combo[i]].place
+                        color = table.camels[color_combo[i]].color
+                        camel_unit = table.pop_unit(table_index, color)
+                        table.add_unit(table_index + dice_combo[i], camel_unit)
+                        if table_index + dice_combo[i] > 20:
+                            break
+                    sequence.append(table.rank())
+            with lock:
+                L.append(sequence)
+
+        threads = []
+        table = copy.deepcopy(self.table)
+        manager = multiprocessing.Manager()
+        L = manager.list()
+
+        for d_c_bin in dice_combo_bins:
+            t = multiprocessing.Process(target=predict_bin, args=(d_c_bin, table, lock, L))
+            t.start()
+
+            threads.append(t)
+
+        for t in threads:
+            t.join()
+
+        sequences = list(L)
+
+        print("Prediction time: {0:.2f}s".format(time.time() - start))
 
         for i in range(5):
-            for seq in sequences:
-                for color in ["red", "blue", "green", "white", "yellow"]:
-                    if seq[i] == color:
-                        result[color][i] += 1 / len(sequences) * 100
+            for sequence in sequences:
+                for seq in sequence:
+                    for color in ["red", "blue", "green", "white", "yellow"]:
+                        if seq[i] == color:
+                            result[color][i] += 1 / (len(sequences) * len(sequence)) * 100
 
         print("color\tno.1\tno.2\tno.3\tno.4\tno.5")
         for color in ["red", "blue", "green", "white", "yellow"]:
