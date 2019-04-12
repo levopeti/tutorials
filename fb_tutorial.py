@@ -2,7 +2,10 @@ import fbchat
 from getpass import getpass
 import time
 from fbchat import log, Client
+from fbchat.models import Message, ThreadType
 
+import re
+import random
 
 # Subclass fbchat.Client and override required methods
 
@@ -12,16 +15,24 @@ class EchoBot(Client):
         self.markAsDelivered(thread_id, message_object.uid)
         self.markAsRead(thread_id)
 
-        log.info("{} from {} in {}".format(message_object, thread_id, thread_type.name))
+        text_message = message_object.text
+        # print(type(text_message))
 
+        p = re.compile(r'[\w,\s,.]*baba[\w,\s,.]*', re.IGNORECASE)
+
+        match = p.findall(text_message)
+        print(match)
+        # log.info("{} from {} in {}".format(message_object, thread_id, thread_type.name))
+        msg = "No baba!" if random.random() > 0.5 else "Yes baba!"
+        thx_messege = Message(text=msg)
         # If you're not the author, echo
-        if author_id != self.uid:
-            self.send(message_object, thread_id=thread_id, thread_type=thread_type)
+        if author_id != self.uid and match and thread_type != ThreadType.GROUP:
+            self.send(thx_messege, thread_id=thread_id, thread_type=thread_type)
 
 
 client = EchoBot("beracom@freemail.hu", getpass())
 client.listen()
-
+"""
 # username = "beracom@freemail.hu"   #str(input("Username: "))
 # client = fbchat.Client(username, getpass())
 # no_of_friends = 1 #int(input("Number of friends: "))
@@ -71,7 +82,7 @@ client.listen()
 
 #
 # for i in range(no_of_friends):
-#     name = "Jezeri András" #str(input("Name: "))
+#     name = "Jezeri Andrs" #str(input("Name: "))
 #     friends = client.searchForUsers(name)  # return a list of names
 #     friend = friends[0]
 #     msg = fbchat.models.Message(text=str(input("Message: ")))
@@ -82,3 +93,4 @@ client.listen()
 #         if sent and sent2:
 #             print("Messages sent successfully!")
 #         time.sleep(600)
+"""
